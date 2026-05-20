@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode for Tailwind utilities */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Base light theme tokens ────────────────────────────────────────────────── */
+@theme {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
+  --color-primary: oklch(0.205 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+
+  --color-chart-1: oklch(0.646 0.222 41.116);
+  --color-chart-2: oklch(0.6 0.118 184.714);
+  --color-chart-3: oklch(0.398 0.07 227.392);
+  --color-chart-4: oklch(0.828 0.189 84.429);
+  --color-chart-5: oklch(0.769 0.188 70.08);
+}
+
+/* ── Dark mode — .dark class on <html> ─────────────────────────────────────── */
+.dark {
+  --color-background: oklch(0.145 0 0);
+  --color-foreground: oklch(0.985 0 0);
+  --color-card: oklch(0.205 0 0);
+  --color-card-foreground: oklch(0.985 0 0);
+  --color-primary: oklch(0.72 0.2 41); /* orange — default dark accent */
+  --color-primary-foreground: oklch(0.1 0.02 41);
+  --color-secondary: oklch(0.269 0 0);
+  --color-secondary-foreground: oklch(0.985 0 0);
+  --color-muted: oklch(0.269 0 0);
+  --color-muted-foreground: oklch(0.708 0 0);
+  --color-accent: oklch(0.269 0 0);
+  --color-accent-foreground: oklch(0.985 0 0);
+  --color-destructive: oklch(0.396 0.141 25.723);
+  --color-border: oklch(0.269 0 0);
+  --color-input: oklch(0.269 0 0);
+  --color-ring: oklch(0.72 0.2 41);
+
+  --color-chart-1: oklch(0.488 0.243 264.376);
+  --color-chart-2: oklch(0.696 0.17 162.48);
+  --color-chart-3: oklch(0.769 0.188 70.08);
+  --color-chart-4: oklch(0.627 0.265 303.9);
+  --color-chart-5: oklch(0.645 0.246 16.439);
+}
+
+/* ── Per-background theme overrides ────────────────────────────────────────── */
+/* Each non-default background tints the card surfaces to match the body gradient */
+
+/* Midnight — deep indigo/purple */
+[data-bg="midnight"] {
+  --color-card: oklch(0.19 0.045 285);
+  --color-card-foreground: oklch(0.93 0.02 285);
+  --color-secondary: oklch(0.23 0.04 285);
+  --color-secondary-foreground: oklch(0.9 0.02 285);
+  --color-muted: oklch(0.23 0.04 285);
+  --color-muted-foreground: oklch(0.62 0.04 285);
+  --color-border: oklch(0.3 0.055 285);
+  --color-input: oklch(0.3 0.055 285);
+  --color-accent: oklch(0.23 0.04 285);
+  --color-accent-foreground: oklch(0.93 0.02 285);
+  --color-background: oklch(0.13 0.04 285);
+  --color-foreground: oklch(0.95 0.015 285);
+  --color-primary: oklch(0.68 0.22 275); /* electric violet */
+  --color-primary-foreground: oklch(0.1 0.02 275);
+  --color-ring: oklch(0.68 0.22 275);
+}
+
+/* Aurora — dark forest green / navy */
+[data-bg="aurora"] {
+  --color-card: oklch(0.17 0.045 160);
+  --color-card-foreground: oklch(0.93 0.02 160);
+  --color-secondary: oklch(0.21 0.04 160);
+  --color-secondary-foreground: oklch(0.9 0.02 160);
+  --color-muted: oklch(0.21 0.04 160);
+  --color-muted-foreground: oklch(0.6 0.04 160);
+  --color-border: oklch(0.28 0.06 160);
+  --color-input: oklch(0.28 0.06 160);
+  --color-accent: oklch(0.21 0.04 160);
+  --color-accent-foreground: oklch(0.93 0.02 160);
+  --color-background: oklch(0.12 0.04 160);
+  --color-foreground: oklch(0.95 0.015 160);
+  --color-primary: oklch(0.72 0.2 155); /* vivid emerald */
+  --color-primary-foreground: oklch(0.1 0.02 155);
+  --color-ring: oklch(0.72 0.2 155);
+}
+
+/* Dusk — dark navy / plum */
+[data-bg="dusk"] {
+  --color-card: oklch(0.17 0.05 305);
+  --color-card-foreground: oklch(0.93 0.02 305);
+  --color-secondary: oklch(0.22 0.045 305);
+  --color-secondary-foreground: oklch(0.9 0.02 305);
+  --color-muted: oklch(0.22 0.045 305);
+  --color-muted-foreground: oklch(0.6 0.04 305);
+  --color-border: oklch(0.3 0.065 305);
+  --color-input: oklch(0.3 0.065 305);
+  --color-accent: oklch(0.22 0.045 305);
+  --color-accent-foreground: oklch(0.93 0.02 305);
+  --color-background: oklch(0.13 0.05 305);
+  --color-foreground: oklch(0.95 0.015 305);
+  --color-primary: oklch(0.7 0.22 315); /* rose / mauve */
+  --color-primary-foreground: oklch(0.1 0.02 315);
+  --color-ring: oklch(0.7 0.22 315);
+}
+
+/* Slate — dark cool blue-grey */
+[data-bg="slate"] {
+  --color-card: oklch(0.2 0.025 230);
+  --color-card-foreground: oklch(0.93 0.01 230);
+  --color-secondary: oklch(0.25 0.025 230);
+  --color-secondary-foreground: oklch(0.9 0.01 230);
+  --color-muted: oklch(0.25 0.025 230);
+  --color-muted-foreground: oklch(0.62 0.025 230);
+  --color-border: oklch(0.32 0.03 230);
+  --color-input: oklch(0.32 0.03 230);
+  --color-accent: oklch(0.25 0.025 230);
+  --color-accent-foreground: oklch(0.93 0.01 230);
+  --color-background: oklch(0.15 0.025 230);
+  --color-foreground: oklch(0.95 0.01 230);
+  --color-primary: oklch(0.7 0.19 225); /* steel blue */
+  --color-primary-foreground: oklch(0.1 0.02 225);
+  --color-ring: oklch(0.7 0.19 225);
+}
+
+/* Ember — dark burnt amber */
+[data-bg="ember"] {
+  --color-card: oklch(0.18 0.04 40);
+  --color-card-foreground: oklch(0.94 0.02 40);
+  --color-secondary: oklch(0.22 0.04 40);
+  --color-secondary-foreground: oklch(0.9 0.02 40);
+  --color-muted: oklch(0.22 0.04 40);
+  --color-muted-foreground: oklch(0.62 0.04 40);
+  --color-border: oklch(0.3 0.055 40);
+  --color-input: oklch(0.3 0.055 40);
+  --color-accent: oklch(0.22 0.04 40);
+  --color-accent-foreground: oklch(0.94 0.02 40);
+  --color-background: oklch(0.13 0.04 40);
+  --color-foreground: oklch(0.95 0.015 40);
+  --color-primary: oklch(0.76 0.22 45); /* deep amber / gold */
+  --color-primary-foreground: oklch(0.1 0.02 45);
+  --color-ring: oklch(0.76 0.22 45);
+}
+
+/* Arctic — light icy blue */
+[data-bg="arctic"] {
+  --color-card: oklch(0.98 0.015 220);
+  --color-card-foreground: oklch(0.18 0.02 220);
+  --color-secondary: oklch(0.93 0.02 220);
+  --color-secondary-foreground: oklch(0.22 0.02 220);
+  --color-muted: oklch(0.93 0.02 220);
+  --color-muted-foreground: oklch(0.48 0.03 220);
+  --color-border: oklch(0.86 0.04 220);
+  --color-input: oklch(0.86 0.04 220);
+  --color-accent: oklch(0.93 0.02 220);
+  --color-accent-foreground: oklch(0.18 0.02 220);
+  --color-background: oklch(0.95 0.02 220);
+  --color-foreground: oklch(0.15 0.02 220);
+  --color-primary: oklch(0.45 0.22 215); /* vivid sky blue */
+  --color-primary-foreground: oklch(0.98 0.01 215);
+  --color-ring: oklch(0.45 0.22 215);
+}
+
+/* Paper — warm off-white cream */
+[data-bg="paper"] {
+  --color-card: oklch(0.99 0.01 80);
+  --color-card-foreground: oklch(0.18 0.015 80);
+  --color-secondary: oklch(0.94 0.015 80);
+  --color-secondary-foreground: oklch(0.22 0.015 80);
+  --color-muted: oklch(0.94 0.015 80);
+  --color-muted-foreground: oklch(0.48 0.025 80);
+  --color-border: oklch(0.87 0.025 80);
+  --color-input: oklch(0.87 0.025 80);
+  --color-accent: oklch(0.94 0.015 80);
+  --color-accent-foreground: oklch(0.18 0.015 80);
+  --color-background: oklch(0.97 0.015 80);
+  --color-foreground: oklch(0.15 0.015 80);
+  --color-primary: oklch(0.48 0.15 55); /* warm amber-brown */
+  --color-primary-foreground: oklch(0.98 0.01 55);
+  --color-ring: oklch(0.48 0.15 55);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+}
