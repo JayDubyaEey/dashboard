@@ -4,7 +4,7 @@ A sleek, minimalistic dashboard that provides a quick, beautiful overview of the
 
 ## Why this exists (Motivation)
 
-I created this project because I wanted a **nice, clutter-free way of viewing essential daily information**. Most weather apps and dashboards are overloaded with ads, dense data, or unnecessary social features. I just wanted a clean, visually appealing summary of my environment—current weather, air quality, when the sun is setting, and how the day is progressing. 
+I created this project because I wanted a **nice, clutter-free way of viewing essential daily information**. Most weather apps and dashboards are overloaded with ads, dense data, or unnecessary social features. I just wanted a clean, visually appealing summary of my environment—current weather, air quality, when the sun is setting, and how the day is progressing.
 
 This dashboard serves as a calm, distraction-free glance at everything going on around me, precisely tailored without the visual noise.
 
@@ -36,23 +36,27 @@ This project is built with modern, performant web technologies:
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+ recommended)
 - npm or your preferred package manager (yarn, pnpm, bun)
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/JayDubyaEey/dashboard.git
    cd dashboard
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Start the development server:
+
    ```bash
    npm run dev
    ```
