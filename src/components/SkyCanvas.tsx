@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef } from "react"
+import { useLayoutEffect, useRef, useState, useCallback } from "react"
 import { useCanvasAnimation, type DrawFn } from "@/hooks/useCanvasAnimation"
+import { type MoonPhaseData } from "@/lib/astronomy"
 
 interface SkyCanvasProps {
   progress: number // 0–1 position through daylight
@@ -8,7 +9,8 @@ interface SkyCanvasProps {
   isDark: boolean // system dark mode
   apexRatio: number // 0–1 fraction of canvas height for arc apex
   sunElevationDeg: number // actual sun elevation in degrees (negative = below horizon)
-  nightProgress: number // 0–1 through the night (0=just set, 0.5=midnight, 1=about to rise)
+  moonProgress: number | null // 0–1 moon arc position at night; null if below horizon
+  moonPhaseData: MoonPhaseData // current lunar phase
 }
 
 // ── Colour helpers ─────────────────────────────────────────────────────────────
@@ -64,6 +66,11 @@ const STARS: [number, number, number][] = [
   [0.7, 0.42, 0.8],
   [0.92, 0.18, 1.0],
   [0.08, 0.5, 0.7],
+  [0.3, 0.48, 0.6],
+  [0.58, 0.52, 0.8],
+  [0.75, 0.55, 0.7],
+  [0.15, 0.6, 0.9],
+  [0.48, 0.62, 0.6],
 ]
 
 function getSkyStops(p: number, isDaytime: boolean, isDark: boolean): [RGB, RGB] {
@@ -93,13 +100,12 @@ const ARC_MARGIN_RATIO = 0.08
 function arcPoint(W: number, H: number, t: number, apexRatio: number): [number, number] {
   const m = W * ARC_MARGIN_RATIO
   const apexY = H * apexRatio
-  const baseY = H * 0.78
   const x0 = m,
     x2 = W - m,
     cx = W / 2,
     cy = apexY
   const x = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cx + t * t * x2
-  const y = (1 - t) * (1 - t) * baseY + 2 * (1 - t) * t * cy + t * t * baseY
+  const y = (1 - t) * (1 - t) * H + 2 * (1 - t) * t * cy + t * t * H
   return [x, y]
 }
 
@@ -110,31 +116,103 @@ function arcPartialCP(
   apexRatio: number
 ): [number, number, number, number] {
   const m = W * ARC_MARGIN_RATIO
-  const baseY = H * 0.78
   const apexY = H * apexRatio
   const x0 = m,
     cx = W / 2,
     cpy = apexY
   const cpx1 = (1 - t) * x0 + t * cx
-  const cpy1 = (1 - t) * baseY + t * cpy
+  const cpy1 = (1 - t) * H + t * cpy
   return [cpx1, cpy1, ...arcPoint(W, H, t, apexRatio)]
 }
 
+// ── Moon phase disc ────────────────────────────────────────────────────────────
+
 /**
- * Point on the below-horizon arc.
- * t=0 → right edge (sunset/west), t=0.5 → nadir (midnight), t=1 → left edge (sunrise/east)
+ * Draws a moon disc with the correct phase terminator.
+ *
+ * Approach: fill the full disc with the lit gradient, then overlay the dark
+ * (shadow) side using a semicircle + a terminator ellipse whose x-radius
+ * shrinks from `r` (new/full) to 0 (quarter) and back. The ellipse either
+ * "bites into" the lit side (crescent) or "extends" the lit side (gibbous).
+ *
+ *   phase 0.00 → new moon  (all dark)
+ *   phase 0.25 → first quarter  (right half lit, waxing)
+ *   phase 0.50 → full moon (all lit)
+ *   phase 0.75 → last quarter  (left half lit, waning)
  */
-function belowArcPoint(W: number, H: number, t: number, nadirRatio: number): [number, number] {
-  const m = W * ARC_MARGIN_RATIO
-  const baseY = H * 0.78
-  const nadirY = H * nadirRatio
-  const x0 = W - m,
-    x2 = m,
-    cx = W / 2,
-    cy = nadirY
-  const x = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cx + t * t * x2
-  const y = (1 - t) * (1 - t) * baseY + 2 * (1 - t) * t * cy + t * t * baseY
-  return [x, y]
+function drawMoonPhaseDisc(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  phase: number,
+  topRgb: RGB,
+  botRgb: RGB
+) {
+  const shadowColor = lerpColor(topRgb, botRgb, 0.25)
+
+  const litGrd = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r)
+  litGrd.addColorStop(0, "rgba(230,240,255,1.0)")
+  litGrd.addColorStop(0.6, "rgba(200,215,240,1.0)")
+  litGrd.addColorStop(1.0, "rgba(160,180,210,1.0)")
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.clip()
+
+  // 1. Shadow background (covers whole disc)
+  ctx.fillStyle = shadowColor
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+
+  const isWaxing = phase <= 0.5
+
+  // 2. Lit semicircle (right for waxing, left for waning)
+  ctx.fillStyle = litGrd
+  ctx.beginPath()
+  if (isWaxing) {
+    ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2) // right half
+  } else {
+    ctx.arc(cx, cy, r, Math.PI / 2, (3 * Math.PI) / 2) // left half
+  }
+  ctx.closePath()
+  ctx.fill()
+
+  // 3. Terminator ellipse — rx shrinks from r→0 at quarter, expands back to r at full/new
+  const terminatorRx = r * Math.abs(Math.cos(phase * Math.PI * 2))
+  if (terminatorRx > 0.5) {
+    if (phase <= 0.25) {
+      // Waxing crescent: dark ellipse on right eats into lit semicircle
+      ctx.fillStyle = shadowColor
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, terminatorRx, r, 0, -Math.PI / 2, Math.PI / 2)
+      ctx.closePath()
+      ctx.fill()
+    } else if (phase <= 0.5) {
+      // Waxing gibbous: lit ellipse on left extends the lit area
+      ctx.fillStyle = litGrd
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, terminatorRx, r, 0, Math.PI / 2, (3 * Math.PI) / 2)
+      ctx.closePath()
+      ctx.fill()
+    } else if (phase <= 0.75) {
+      // Waning gibbous: lit ellipse on right extends the lit area
+      ctx.fillStyle = litGrd
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, terminatorRx, r, 0, -Math.PI / 2, Math.PI / 2)
+      ctx.closePath()
+      ctx.fill()
+    } else {
+      // Waning crescent: dark ellipse on left eats into lit semicircle
+      ctx.fillStyle = shadowColor
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, terminatorRx, r, 0, Math.PI / 2, (3 * Math.PI) / 2)
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+
+  ctx.restore()
 }
 
 // ── Draw ───────────────────────────────────────────────────────────────────────
@@ -151,63 +229,80 @@ function drawSkyFrame(
     t: number
     apexRatio: number
     sunElevationDeg: number
-    nightProgress: number
+    moonProgress: number | null
+    moonPhaseData: MoonPhaseData
   }
 ) {
-  const { progress, isDaytime, sunProgress, isDark, t, apexRatio, sunElevationDeg, nightProgress } =
+  const { progress, isDaytime, sunProgress, isDark, t, apexRatio, moonProgress, moonPhaseData } =
     opts
 
-  const baseY = H * 0.78
-
-  const nadirRatio = Math.min(0.96, 0.78 + (0.78 - apexRatio))
-
-  // 1. Sky gradient
+  // 1. Sky gradient — full canvas
   const [topRgb, botRgb] = getSkyStops(progress, isDaytime, isDark)
-  const skyGrd = ctx.createLinearGradient(0, 0, 0, baseY)
+  const skyGrd = ctx.createLinearGradient(0, 0, 0, H)
   skyGrd.addColorStop(0, lerpColor(topRgb, botRgb, 0))
   skyGrd.addColorStop(1, lerpColor(topRgb, botRgb, 1))
   ctx.fillStyle = skyGrd
-  ctx.fillRect(0, 0, W, baseY)
+  ctx.fillRect(0, 0, W, H)
 
-  // 2. Atmospheric haze toward horizon
-  const hazeGrd = ctx.createLinearGradient(0, H * 0.45, 0, baseY)
+  // 2. Atmospheric haze — thicker band toward the bottom
+  const hazeGrd = ctx.createLinearGradient(0, H * 0.4, 0, H)
   hazeGrd.addColorStop(0, "rgba(255,255,255,0.00)")
-  hazeGrd.addColorStop(1, `rgba(255,255,255,${isDaytime ? 0.07 : 0.02})`)
+  hazeGrd.addColorStop(1, `rgba(255,255,255,${isDaytime ? 0.1 : 0.03})`)
   ctx.fillStyle = hazeGrd
-  ctx.fillRect(0, 0, W, baseY)
+  ctx.fillRect(0, 0, W, H)
 
-  // 3. Horizon glow when sun is near horizon (above)
+  // 3. Horizon glow when sun is near horizon
   if (isDaytime && (progress < 0.18 || progress > 0.82)) {
     const strength = progress < 0.18 ? (0.18 - progress) / 0.18 : (progress - 0.82) / 0.18
     const [hsx] = arcPoint(W, H, sunProgress, apexRatio)
-    const hgrd = ctx.createRadialGradient(hsx, baseY, 0, hsx, baseY, W * 0.45)
-    hgrd.addColorStop(0, `rgba(255,150,50,${0.28 * strength})`)
-    hgrd.addColorStop(0.5, `rgba(255,80,20,${0.1 * strength})`)
+    const hgrd = ctx.createRadialGradient(hsx, H, 0, hsx, H, W * 0.5)
+    hgrd.addColorStop(0, `rgba(255,150,50,${0.32 * strength})`)
+    hgrd.addColorStop(0.5, `rgba(255,80,20,${0.12 * strength})`)
     hgrd.addColorStop(1, "rgba(255,60,0,0)")
     ctx.fillStyle = hgrd
-    ctx.fillRect(0, 0, W, baseY)
+    ctx.fillRect(0, 0, W, H)
   }
 
-  // 4. Stars — night only
+  // 4. Vignette — subtle darkening toward all edges
+  const vigR = Math.max(W, H) * 0.85
+  const vig = ctx.createRadialGradient(W / 2, H / 2, vigR * 0.35, W / 2, H / 2, vigR)
+  vig.addColorStop(0, "rgba(0,0,0,0)")
+  vig.addColorStop(1, "rgba(0,0,0,0.22)")
+  ctx.fillStyle = vig
+  ctx.fillRect(0, 0, W, H)
+
+  // 5. Night: nebula wash — faint diagonal Milky Way hint
+  if (!isDaytime) {
+    const neb = ctx.createLinearGradient(0, H * 0.05, W, H * 0.65)
+    neb.addColorStop(0, "rgba(180,160,255,0.00)")
+    neb.addColorStop(0.35, "rgba(180,160,255,0.045)")
+    neb.addColorStop(0.65, "rgba(160,180,255,0.03)")
+    neb.addColorStop(1, "rgba(160,180,255,0.00)")
+    ctx.fillStyle = neb
+    ctx.fillRect(0, 0, W, H)
+  }
+
+  // 6. Stars — night only, spread across upper ~65% of canvas
   if (!isDaytime) {
     for (let i = 0; i < STARS.length; i++) {
       const [fx, fy, r] = STARS[i]
       const twinkle = 0.45 + 0.55 * Math.abs(Math.sin(t * 0.00055 + i * 1.7))
       ctx.beginPath()
-      ctx.arc(fx * W, fy * H * 0.75, r, 0, Math.PI * 2)
+      ctx.arc(fx * W, fy * H * 0.65, r, 0, Math.PI * 2)
       ctx.fillStyle = `rgba(220,230,255,${twinkle})`
       ctx.fill()
     }
   }
 
-  // 5. Subtle cloud wisps (daytime only)
+  // 7. Cloud wisps (daytime only)
   if (isDaytime && progress > 0.1 && progress < 0.9) {
     const cloudAlpha =
-      Math.min(1, (progress - 0.1) / 0.15) * Math.min(1, (0.9 - progress) / 0.1) * 0.045
+      Math.min(1, (progress - 0.1) / 0.15) * Math.min(1, (0.9 - progress) / 0.1) * 0.07
     const clouds = [
       { x: 0.2, y: 0.22, rx: 0.15, ry: 0.045 },
       { x: 0.62, y: 0.14, rx: 0.18, ry: 0.05 },
       { x: 0.85, y: 0.3, rx: 0.1, ry: 0.035 },
+      { x: 0.42, y: 0.38, rx: 0.13, ry: 0.04 },
     ]
     for (const c of clouds) {
       const drift = Math.sin(t * 0.00008 + c.x * 10) * 0.008
@@ -233,15 +328,15 @@ function drawSkyFrame(
 
   const m = W * ARC_MARGIN_RATIO
 
-  // 7. Elapsed arc (solid, warm)
+  // 8. Elapsed arc (solid, warm)
   if (isDaytime && progress > 0.005) {
     const [cpx1, cpy1, ex, ey] = arcPartialCP(W, H, Math.min(progress, 0.999), apexRatio)
     const arcGrd = ctx.createLinearGradient(m, 0, ex, 0)
     arcGrd.addColorStop(0, "rgba(255,150,50,0.6)")
-    arcGrd.addColorStop(1, `${sunColor(progress, isDaytime)}99`)
+    arcGrd.addColorStop(1, `${sunColor(progress, isDaytime)}60`)
     ctx.save()
     ctx.beginPath()
-    ctx.moveTo(m, baseY)
+    ctx.moveTo(m, H)
     ctx.quadraticCurveTo(cpx1, cpy1, ex, ey)
     ctx.strokeStyle = arcGrd
     ctx.lineWidth = 2
@@ -250,12 +345,12 @@ function drawSkyFrame(
     ctx.restore()
   }
 
-  // 8. Sun / Moon (above horizon)
-  const [sx, sy] = arcPoint(W, H, sunProgress, apexRatio)
-  const sc = sunColor(progress, isDaytime)
-  const radius = isDaytime ? 15 : 9
-
+  // 9. Sun (daytime only)
   if (isDaytime) {
+    const [sx, sy] = arcPoint(W, H, sunProgress, apexRatio)
+    const sc = sunColor(progress, isDaytime)
+    const radius = 17
+
     const glowR = radius + 18 + Math.sin(t * 0.0025) * 3
     const glow = ctx.createRadialGradient(sx, sy, radius * 0.9, sx, sy, glowR)
     glow.addColorStop(0, `${sc}38`)
@@ -313,112 +408,25 @@ function drawSkyFrame(
     ctx.arc(sx, sy, radius * 0.6, 0, Math.PI * 2)
     ctx.fillStyle = innerGlow
     ctx.fill()
-  } else {
-    const moonGlow = ctx.createRadialGradient(sx, sy, radius * 0.8, sx, sy, radius + 10)
-    moonGlow.addColorStop(0, "rgba(200,220,255,0.25)")
+  }
+
+  // 10. Moon (nighttime only, when above horizon)
+  if (!isDaytime && moonProgress !== null) {
+    const [mx, my] = arcPoint(W, H, moonProgress, apexRatio)
+    const radius = 10
+
+    // Outer glow
+    const moonGlow = ctx.createRadialGradient(mx, my, radius * 0.8, mx, my, radius + 12)
+    moonGlow.addColorStop(0, `rgba(200,220,255,${0.1 + moonPhaseData.illumination * 0.2})`)
     moonGlow.addColorStop(1, "rgba(200,220,255,0.00)")
     ctx.beginPath()
-    ctx.arc(sx, sy, radius + 10, 0, Math.PI * 2)
+    ctx.arc(mx, my, radius + 12, 0, Math.PI * 2)
     ctx.fillStyle = moonGlow
     ctx.fill()
 
-    const moonGrd = ctx.createRadialGradient(
-      sx - radius * 0.2,
-      sy - radius * 0.2,
-      0,
-      sx,
-      sy,
-      radius
-    )
-    moonGrd.addColorStop(0, "rgba(230, 240, 255, 1.0)")
-    moonGrd.addColorStop(0.6, "rgba(200, 215, 240, 1.0)")
-    moonGrd.addColorStop(1.0, "rgba(160, 180, 210, 1.0)")
-    ctx.beginPath()
-    ctx.arc(sx, sy, radius, 0, Math.PI * 2)
-    ctx.fillStyle = moonGrd
-    ctx.fill()
-
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(sx, sy, radius, 0, Math.PI * 2)
-    ctx.clip()
-    ctx.beginPath()
-    ctx.arc(sx + radius * 0.55, sy - radius * 0.1, radius * 0.85, 0, Math.PI * 2)
-    ctx.fillStyle = lerpColor(topRgb, botRgb, 0.3)
-    ctx.fill()
-    ctx.restore()
-  }
-
-  // ── 9. Below-horizon scene ─────────────────────────────────────────────────
-
-  // Gradient earth — transparent at horizon so the sky colour bleeds through,
-  // then deepens to near-black at the very bottom
-  const earthGrd = ctx.createLinearGradient(0, baseY, 0, H)
-  earthGrd.addColorStop(0, "rgba(12,10,22,0)")
-  earthGrd.addColorStop(0.25, "rgba(12,10,22,0.55)")
-  earthGrd.addColorStop(0.6, "rgba(6,5,14,0.88)")
-  earthGrd.addColorStop(1, "rgba(3,3,8,1)")
-  ctx.fillStyle = earthGrd
-  ctx.fillRect(0, baseY, W, H - baseY)
-
-  const elev = sunElevationDeg
-  if (elev < 0 && elev > -18) {
-    const e = Math.abs(elev)
-    let cr: number, cg: number, cb: number, alpha: number
-    if (e <= 6) {
-      const tt = e / 6
-      cr = Math.round(255 - tt * 80)
-      cg = Math.round(110 - tt * 90)
-      cb = Math.round(30 + tt * 30)
-      alpha = 0.9 - tt * 0.5
-    } else if (e <= 12) {
-      const tt = (e - 6) / 6
-      cr = 50
-      cg = 20
-      cb = 100
-      alpha = 0.4 - tt * 0.28
-    } else {
-      const tt = (e - 12) / 6
-      cr = 15
-      cg = 10
-      cb = 40
-      alpha = 0.12 - tt * 0.1
-    }
-    const glowGrd = ctx.createLinearGradient(0, baseY, 0, baseY + (H - baseY) * 0.65)
-    glowGrd.addColorStop(0, `rgba(${cr},${cg},${cb},${alpha.toFixed(3)})`)
-    glowGrd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`)
-    ctx.fillStyle = glowGrd
-    ctx.fillRect(0, baseY, W, H - baseY)
-  }
-
-  if (!isDaytime) {
-    const [bsx, bsy] = belowArcPoint(W, H, nightProgress, nadirRatio)
-    if (bsy < H - 2 && bsy > baseY) {
-      const elevFade = Math.max(0, Math.min(1, (elev + 18) / 18))
-      const discAlpha = 0.15 + elevFade * 0.65
-
-      const cr = Math.round(220 + elevFade * 35)
-      const cg = Math.round(80 + elevFade * 60)
-      const cb = Math.round(80 - elevFade * 50)
-
-      const glowR = 8 + elevFade * 10
-      const bGlow = ctx.createRadialGradient(bsx, bsy, 0, bsx, bsy, glowR + 8)
-      bGlow.addColorStop(0, `rgba(${cr},${cg},${cb},${(discAlpha * 0.7).toFixed(3)})`)
-      bGlow.addColorStop(1, `rgba(${cr},${cg},${cb},0)`)
-      ctx.beginPath()
-      ctx.arc(bsx, bsy, glowR + 8, 0, Math.PI * 2)
-      ctx.fillStyle = bGlow
-      ctx.fill()
-
-      ctx.beginPath()
-      ctx.arc(bsx, bsy, Math.max(3, glowR * 0.45), 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(${cr},${cg},${cb},${discAlpha.toFixed(3)})`
-      ctx.fill()
-    }
+    drawMoonPhaseDisc(ctx, mx, my, radius, moonPhaseData.phase, topRgb, botRgb)
   }
 }
-
-// ── Component ──────────────────────────────────────────────────────────────────
 
 export function SkyCanvas({
   progress,
@@ -427,7 +435,8 @@ export function SkyCanvas({
   isDark,
   apexRatio,
   sunElevationDeg,
-  nightProgress,
+  moonProgress,
+  moonPhaseData,
 }: SkyCanvasProps) {
   const progressRef = useRef(progress)
   const isDaytimeRef = useRef(isDaytime)
@@ -435,7 +444,10 @@ export function SkyCanvas({
   const isDarkRef = useRef(isDark)
   const apexRatioRef = useRef(apexRatio)
   const sunElevationRef = useRef(sunElevationDeg)
-  const nightProgressRef = useRef(nightProgress)
+  const moonProgressRef = useRef(moonProgress)
+  const moonPhaseDataRef = useRef(moonPhaseData)
+
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null)
 
   // Sync all animated props into refs before the next paint — satisfies react-hooks/refs
   // while keeping the animation loop stable (loop started once, reads via refs)
@@ -446,7 +458,8 @@ export function SkyCanvas({
     isDarkRef.current = isDark
     apexRatioRef.current = apexRatio
     sunElevationRef.current = sunElevationDeg
-    nightProgressRef.current = nightProgress
+    moonProgressRef.current = moonProgress
+    moonPhaseDataRef.current = moonPhaseData
   })
 
   const drawRef = useRef<DrawFn>((ctx, W, H, t) => {
@@ -457,12 +470,83 @@ export function SkyCanvas({
       isDark: isDarkRef.current,
       apexRatio: apexRatioRef.current,
       sunElevationDeg: sunElevationRef.current,
-      nightProgress: nightProgressRef.current,
+      moonProgress: moonProgressRef.current,
+      moonPhaseData: moonPhaseDataRef.current,
       t,
     })
   })
 
   const canvasRef = useCanvasAnimation(drawRef)
 
-  return <canvas ref={canvasRef} className="w-full h-full rounded-t-xl pointer-events-none block" />
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const W = canvas.clientWidth
+      const H = canvas.clientHeight
+      const ox = e.nativeEvent.offsetX
+      const oy = e.nativeEvent.offsetY
+
+      // Check sun (daytime)
+      if (isDaytimeRef.current) {
+        const [sx, sy] = arcPoint(W, H, sunProgressRef.current, apexRatioRef.current)
+        const dx = ox - sx,
+          dy = oy - sy
+        if (dx * dx + dy * dy <= (17 + 6) * (17 + 6)) {
+          const elev = sunElevationRef.current
+          const label =
+            elev >= 0
+              ? `${elev.toFixed(1)}° above horizon`
+              : `${Math.abs(elev).toFixed(1)}° below horizon`
+          setTooltip({ x: sx, y: sy, label })
+          return
+        }
+      }
+
+      // Check moon (nighttime, when visible)
+      const mp = moonProgressRef.current
+      if (!isDaytimeRef.current && mp !== null) {
+        const [mx, my] = arcPoint(W, H, mp, apexRatioRef.current)
+        const dx = ox - mx,
+          dy = oy - my
+        if (dx * dx + dy * dy <= (10 + 6) * (10 + 6)) {
+          const { name, illumination } = moonPhaseDataRef.current
+          setTooltip({
+            x: mx,
+            y: my,
+            label: `${name} · ${Math.round(illumination * 100)}% lit`,
+          })
+          return
+        }
+      }
+
+      setTooltip(null)
+    },
+    // canvasRef identity is stable; all other reads go through refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
+  const handleMouseLeave = useCallback(() => setTooltip(null), [])
+
+  return (
+    <div className="relative w-full h-full">
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full rounded-t-xl pointer-events-auto block"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      />
+      {tooltip && (
+        <div
+          className="absolute pointer-events-none -translate-x-1/2 -translate-y-full"
+          style={{ left: tooltip.x, top: tooltip.y - 10 }}
+        >
+          <div className="rounded-md bg-black/60 backdrop-blur-sm px-2 py-1 text-xs text-white whitespace-nowrap">
+            {tooltip.label}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

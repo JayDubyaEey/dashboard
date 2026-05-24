@@ -1,7 +1,14 @@
 import { Card } from "@/components/ui/card"
 import { SkyCanvas } from "@/components/SkyCanvas"
 import { useIsDark } from "@/hooks/useIsDark"
-import { solarGeometry, computeSunElevation, twilightLabel } from "@/lib/astronomy"
+import {
+  solarGeometry,
+  computeSunElevation,
+  twilightLabel,
+  moonPhase,
+  moonNightProgress,
+} from "@/lib/astronomy"
+import { formatMsToHM } from "@/lib/utils"
 
 interface SunArcCardProps {
   sunrise: string
@@ -10,7 +17,7 @@ interface SunArcCardProps {
   lat?: number // degrees, defaults to London
 }
 
-function fmt(d: Date) {
+function formatHHMM(d: Date) {
   return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
 }
 
@@ -24,22 +31,19 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
   const progress = Math.max(0, Math.min(1, elapsedMs / dayMs))
   const isDaytime = now >= sunriseDate && now <= sunsetDate
 
+  const solarNoonMs = (sunriseDate.getTime() + sunsetDate.getTime()) / 2
+  const solarNoon = new Date(solarNoonMs)
   const { apexRatio, latRad, decRad } = solarGeometry(now, lat)
   const sunElevationDeg = computeSunElevation(now, sunriseDate, sunsetDate, latRad, decRad)
 
-  // nightProgress: 0 = just after sunset, 0.5 = midnight, 1 = just before sunrise
-  const nightMs = 86_400_000 - dayMs
-  let nightProgress = 0
-  if (!isDaytime) {
-    if (now.getTime() > sunsetDate.getTime()) {
-      nightProgress = Math.min(0.5, (now.getTime() - sunsetDate.getTime()) / nightMs)
-    } else {
-      nightProgress = Math.max(0.5, 1 - (sunriseDate.getTime() - now.getTime()) / nightMs)
-    }
-  }
-
-  // Sun position — clamped to visible arc when daytime, parked when night
+  // Sun position — clamped to visible arc when daytime, parked at start when night
   const sunProgress = isDaytime ? progress : 0
+
+  // Moon
+  const moonPhaseData = moonPhase(now)
+  const moonProgress = isDaytime
+    ? null
+    : moonNightProgress(now, sunriseDate, sunsetDate, moonPhaseData.phase)
 
   // Countdown + subtext
   const toSunset = sunsetDate.getTime() - now.getTime()
@@ -50,14 +54,10 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
   let subtext: string
 
   if (isDaytime) {
-    const h = Math.floor(toSunset / 3_600_000)
-    const m = Math.floor((toSunset % 3_600_000) / 60_000)
-    countdown = `Sunset in ${h}h ${m}m`
+    countdown = `Sunset in ${formatMsToHM(toSunset)}`
     subtext = `${Math.round(progress * 100)}% of daylight elapsed`
   } else if (toSunrise > 0) {
-    const h = Math.floor(toSunrise / 3_600_000)
-    const m = Math.floor((toSunrise % 3_600_000) / 60_000)
-    countdown = `Sunrise in ${h}h ${m}m`
+    countdown = `Sunrise in ${formatMsToHM(toSunrise)}`
     subtext = phase
   } else {
     countdown = "Sun has set"
@@ -80,7 +80,8 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
           isDark={isDark}
           apexRatio={apexRatio}
           sunElevationDeg={sunElevationDeg}
-          nightProgress={nightProgress}
+          moonProgress={moonProgress}
+          moonPhaseData={moonPhaseData}
         />
       </div>
 
@@ -93,8 +94,8 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
 
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>☀ {fmt(sunriseDate)}</span>
-            <span>{fmt(sunsetDate)} ☀</span>
+            <span>☀ {formatHHMM(sunriseDate)}</span>
+            <span>{formatHHMM(sunsetDate)} ☀</span>
           </div>
           {/* Progress bar with noon marker */}
           <div className="relative h-1.5">
@@ -107,11 +108,11 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
                 }}
               />
             </div>
-            {/* Noon marker — a small tick at the 50% point */}
-            <div
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 rounded-full bg-muted-foreground/40"
-              style={{ left: "50%" }}
-            />
+            {/* Noon marker */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 rounded-full bg-muted-foreground/40" />
+            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
+              {formatHHMM(solarNoon)}
+            </span>
           </div>
           <p className="text-xs text-muted-foreground text-center">{dayLength}</p>
         </div>

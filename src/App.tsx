@@ -10,6 +10,7 @@ import { WindPressureCard } from "@/components/WindPressureCard"
 import { SunArcCard } from "@/components/SunArcCard"
 import { AirQualityCard } from "@/components/AirQualityCard"
 import { CountdownRings } from "@/components/CountdownRings"
+import { AllergyCard } from "@/components/AllergyCard"
 import { ThemePanel, ThemeTrigger } from "@/components/ThemePanel"
 import { Loader2, RefreshCw, GitFork, CloudSun } from "lucide-react"
 
@@ -33,7 +34,7 @@ function App() {
       className="min-h-screen transition-colors duration-300"
       style={background.value ? { background: background.value } : undefined}
     >
-      <div className="max-w-5xl mx-auto p-4 sm:p-8">
+      <div className="w-[80%] mx-auto p-4 sm:p-8">
         {/* Header row */}
         <div className="mb-8">
           <GreetingHeader
@@ -52,7 +53,8 @@ function App() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Row 1: Weather · Wind & Pressure · Air Quality · Pollen — 4 equal columns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {weather && (
                 <WeatherCard
                   temperature={weather.temperature}
@@ -66,19 +68,8 @@ function App() {
                 <WindPressureCard
                   windSpeed={weather.windSpeed}
                   windDirection={weather.windDirection}
+                  windGusts={weather.windGusts}
                   pressure={weather.pressure}
-                  feelsLike={weather.feelsLike}
-                />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {weather && (
-                <SunArcCard
-                  sunrise={weather.sunrise}
-                  sunset={weather.sunset}
-                  now={now}
-                  lat={location.lat}
                 />
               )}
               {airQuality && (
@@ -89,8 +80,20 @@ function App() {
                   no2={airQuality.no2}
                 />
               )}
+              {airQuality && <AllergyCard pollen={airQuality.pollen} />}
             </div>
 
+            {/* Row 2: Sun Arc — full width */}
+            {weather && (
+              <SunArcCard
+                sunrise={weather.sunrise}
+                sunset={weather.sunset}
+                now={now}
+                lat={location.lat}
+              />
+            )}
+
+            {/* Row 3: Countdowns — full width */}
             <CountdownRings now={now} />
 
             {appearanceOpen && (

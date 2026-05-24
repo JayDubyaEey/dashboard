@@ -10,7 +10,7 @@ export type ResizeFn = (W: number, H: number) => void
  * loop. Callers pass a stable `drawRef` (mutated via useLayoutEffect) so the
  * loop never needs to restart when props change.
  *
- * @param drawRef   - Ref to the per-frame draw function. Read each frame.
+ * @param drawRef     - Ref to the per-frame draw function. Read each frame.
  * @param onResizeRef - Optional ref to a callback fired whenever the canvas
  *                      is resized (use to re-scatter particles etc.).
  * @returns A ref to attach to the <canvas> element.
@@ -29,8 +29,6 @@ export function useCanvasAnimation(
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    let t = 0
-
     const resize = () => {
       const W = canvas.offsetWidth
       const H = canvas.offsetHeight
@@ -38,17 +36,16 @@ export function useCanvasAnimation(
         canvas.width = W
         canvas.height = H
         sizeRef.current = { W, H }
-        onResizeRef?.current(W, H)
+        onResizeRef?.current?.(W, H)
       }
     }
 
-    const tick = () => {
+    const tick = (t: number) => {
       const { W, H } = sizeRef.current
       if (W > 0 && H > 0) {
         ctx.clearRect(0, 0, W, H)
-        drawRef.current(ctx, W, H, t)
+        drawRef.current?.(ctx, W, H, t)
       }
-      t += 16
       rafRef.current = requestAnimationFrame(tick)
     }
 

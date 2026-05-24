@@ -61,7 +61,7 @@ export function WindParticles({ windSpeed, windDirection, color }: WindParticles
       grad.addColorStop(1, `rgba(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]},0)`)
 
       ctx.strokeStyle = grad
-      ctx.lineWidth = 1.2
+      ctx.lineWidth = 1.8
       ctx.stroke()
 
       p.x += s.dx * p.speed * 2
@@ -85,7 +85,7 @@ export function WindParticles({ windSpeed, windDirection, color }: WindParticles
 
   // Re-initialise state when wind props or colour changes
   useEffect(() => {
-    const count = Math.max(6, Math.min(40, Math.floor(windSpeed * 0.8)))
+    const count = Math.max(14, Math.min(60, Math.floor(windSpeed * 1.2)))
     const baseSpeed = Math.max(0.4, windSpeed / 20)
     const rad = ((windDirection + 180) % 360) * (Math.PI / 180)
     const dx = Math.sin(rad)
@@ -95,8 +95,8 @@ export function WindParticles({ windSpeed, windDirection, color }: WindParticles
       particles: Array.from({ length: count }, () => ({
         x: Math.random() * 300,
         y: Math.random() * 200,
-        length: 10 + Math.random() * 30,
-        opacity: 0.3,
+        length: 14 + Math.random() * 40,
+        opacity: 0.6 + Math.random() * 0.3,
         speed: baseSpeed * (0.7 + Math.random() * 0.6),
       })),
       dx,
@@ -111,7 +111,7 @@ export function WindParticles({ windSpeed, windDirection, color }: WindParticles
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full rounded-xl pointer-events-none"
-      style={{ opacity: windSpeed < 5 ? 0.3 : 1 }}
+      style={{ opacity: windSpeed < 5 ? 0.6 : 1 }}
     />
   )
 }

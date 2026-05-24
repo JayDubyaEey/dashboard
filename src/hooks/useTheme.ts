@@ -1,9 +1,5 @@
-import { useState, useEffect } from "react"
-import { type ThemeMode, type ForcedMode, type Background, BACKGROUNDS } from "@/lib/themes"
-
-// Re-export for components that already import these types from this hook
-export type { ThemeMode, ForcedMode, Background }
-export { BACKGROUNDS }
+import { useState, useEffect, useCallback } from "react"
+import { type ThemeMode, BACKGROUNDS } from "@/lib/themes"
 
 function parseMode(raw: string | null): ThemeMode {
   if (raw === "light" || raw === "dark" || raw === "system") return raw
@@ -52,15 +48,15 @@ export function useTheme() {
     return () => mq.removeEventListener("change", handler)
   }, [mode, background])
 
-  const setThemeMode = (m: ThemeMode) => {
+  const setThemeMode = useCallback((m: ThemeMode) => {
     setMode(m)
     localStorage.setItem(STORAGE_MODE, m)
-  }
+  }, [])
 
-  const setBackground = (id: string) => {
+  const setBackground = useCallback((id: string) => {
     setBackgroundId(id)
     localStorage.setItem(STORAGE_BG, id)
-  }
+  }, [])
 
   return { mode, setThemeMode, background, backgroundId, setBackground }
 }

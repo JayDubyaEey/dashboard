@@ -8,14 +8,11 @@ interface CountdownRingsProps {
 
 const RING_RADIUS = 28
 
-const ASTRONOMICAL_COLORS: Record<string, { stroke: string; label: string }> = {
+const EVENT_COLORS: Record<string, { stroke: string; label: string }> = {
   "Spring Equinox": { stroke: "#6ee7b7", label: "🌸" },
   "Summer Solstice": { stroke: "#fcd34d", label: "☀️" },
   "Autumn Equinox": { stroke: "#fb923c", label: "🍂" },
   "Winter Solstice": { stroke: "#93c5fd", label: "❄️" },
-}
-
-const SPECIAL_COLORS: Record<string, { stroke: string; label: string }> = {
   Christmas: { stroke: "#4ade80", label: "🎄" },
   "New Year": { stroke: "#c084fc", label: "🎆" },
 }
@@ -24,17 +21,8 @@ export function CountdownRings({ now }: CountdownRingsProps) {
   const astronomicalEvents = getNextAstronomicalEvent(now)
   const specialEvents = getNextSpecialEvents(now, SPECIAL_EVENTS)
 
-  const astro = astronomicalEvents
-    .map((e) => ({
-      name: e.name,
-      days: daysUntil(e.date, now),
-      type: "astronomical" as const,
-    }))
-    .sort((a, b) => a.days - b.days)
-
-  const special = specialEvents
-    .map((e) => ({ name: e.name, days: e.days, type: "special" as const }))
-    .sort((a, b) => a.days - b.days)
+  const astro = astronomicalEvents.map((e) => ({ name: e.name, days: daysUntil(e.date, now) }))
+  const special = specialEvents.map((e) => ({ name: e.name, days: e.days }))
 
   const allEvents = [...astro, ...special]
 
@@ -48,8 +36,7 @@ export function CountdownRings({ now }: CountdownRingsProps) {
             const progress = 1 - event.days / maxDays
             const circumference = 2 * Math.PI * RING_RADIUS
             const offset = circumference * (1 - Math.max(0, Math.min(1, progress)))
-            const colorMap = event.type === "astronomical" ? ASTRONOMICAL_COLORS : SPECIAL_COLORS
-            const meta = colorMap[event.name] ?? { stroke: "#94a3b8", label: "📅" }
+            const meta = EVENT_COLORS[event.name] ?? { stroke: "#94a3b8", label: "📅" }
 
             return (
               <div key={event.name} className="flex flex-col items-center gap-2">
@@ -60,7 +47,7 @@ export function CountdownRings({ now }: CountdownRingsProps) {
                       cy="32"
                       r={RING_RADIUS}
                       fill="none"
-                      stroke={meta.stroke + "33"}
+                      stroke={`color-mix(in srgb, ${meta.stroke} 20%, transparent)`}
                       strokeWidth="4"
                     />
                     <circle

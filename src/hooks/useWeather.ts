@@ -8,6 +8,7 @@ interface WeatherData {
   humidity: number
   windSpeed: number
   windDirection: number
+  windGusts: number
   pressure: number
   uvIndex: number
   weatherCode: number
@@ -18,7 +19,7 @@ interface WeatherData {
 export function useWeather(lat: number, lon: number) {
   const fetcher = useCallback(async (): Promise<WeatherData | null> => {
     const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,uv_index&daily=sunrise,sunset&timezone=auto&forecast_days=1`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,uv_index&daily=sunrise,sunset&timezone=auto&forecast_days=1`
     )
     const data = await res.json()
     const { current, daily } = data
@@ -28,6 +29,7 @@ export function useWeather(lat: number, lon: number) {
       humidity: current.relative_humidity_2m,
       windSpeed: current.wind_speed_10m,
       windDirection: current.wind_direction_10m,
+      windGusts: current.wind_gusts_10m,
       pressure: current.surface_pressure,
       uvIndex: current.uv_index,
       weatherCode: current.weather_code,

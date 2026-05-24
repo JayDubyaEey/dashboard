@@ -18,7 +18,7 @@ export function GreetingHeader({
   timezone,
 }: GreetingHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 flex-1 min-w-0">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 min-w-0">
       <div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
           {greeting}, <span className="text-muted-foreground">{city}</span>

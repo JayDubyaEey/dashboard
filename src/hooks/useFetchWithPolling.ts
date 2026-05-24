@@ -5,7 +5,10 @@ import { useState, useEffect } from "react"
  * `fetcher` should be a stable `useCallback` reference — when it changes
  * (e.g. lat/lon changed) the effect re-runs, triggering a fresh fetch.
  */
-export function useFetchWithPolling<T>(fetcher: () => Promise<T | null>, interval: number) {
+export function useFetchWithPolling<T extends object>(
+  fetcher: () => Promise<T | null>,
+  interval: number
+) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)

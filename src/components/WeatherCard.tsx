@@ -23,10 +23,10 @@ export function WeatherCard({
   const label = getTemperatureLabel(feelsLike)
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="relative overflow-hidden flex flex-col h-full">
       <WeatherAnimation weatherCode={weatherCode} />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col flex-1">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Thermometer className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
@@ -42,15 +42,15 @@ export function WeatherCard({
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1">
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold" style={{ color: "var(--color-primary)" }}>
                 {Math.round(temperature)}°C
               </span>
               <span className="text-muted-foreground text-sm">{description}</span>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm mt-auto pt-4">
               <div
                 className="flex flex-col items-center gap-1 p-2 rounded-lg"
                 style={{

@@ -81,7 +81,7 @@ export function AirParticles({ aqi }: AirParticlesProps) {
         r: 0.8 + Math.random() * maxRadius,
         vx: (Math.random() - 0.5) * chaos * 0.8,
         vy: -(0.15 + Math.random() * baseSpeed),
-        opacity: 0.3,
+        opacity: 0.15 + Math.random() * 0.35,
         wobbleOffset: Math.random() * Math.PI * 2,
         wobbleSpeed: 0.003 + Math.random() * 0.006 * chaos,
       })),
