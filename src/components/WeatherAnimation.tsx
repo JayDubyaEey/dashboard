@@ -115,28 +115,58 @@ function initWeatherState(type: AnimationType, W: number, H: number): WeatherSta
 function animateSunRays(ctx: CanvasRenderingContext2D, W: number, H: number, t: number) {
   const cx = W * 0.75
   const cy = H * 0.25
-  const numRays = 8
 
+  // Draw soft glow layers
+  for (let layer = 0; layer < 3; layer++) {
+    const radius = 15 + layer * 8
+    const alpha = (0.15 - layer * 0.04) * (0.8 + Math.sin(t * 0.0008) * 0.2)
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
+    grd.addColorStop(0, `rgba(252, 211, 77, ${alpha})`)
+    grd.addColorStop(0.6, `rgba(252, 211, 77, ${alpha * 0.4})`)
+    grd.addColorStop(1, "rgba(252, 211, 77, 0)")
+    ctx.beginPath()
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+    ctx.fillStyle = grd
+    ctx.fill()
+  }
+
+  // Draw smooth animated rays with soft, diffused appearance
+  const numRays = 12
   for (let i = 0; i < numRays; i++) {
-    const angle = (i / numRays) * Math.PI * 2 + t * 0.003
-    const inner = 18
-    const outer = 28 + Math.sin(t * 0.004 + i) * 6
+    const angle = (i / numRays) * Math.PI * 2 + t * 0.0006
+    const pulseAmount = Math.sin(t * 0.0008 + i * 0.5) * 2
+    const inner = 20
+    const outer = 40 + pulseAmount
+
+    // Create a gradient for each ray to make it softer
+    const rayGradient = ctx.createLinearGradient(
+      cx + Math.cos(angle) * inner,
+      cy + Math.sin(angle) * inner,
+      cx + Math.cos(angle) * outer,
+      cy + Math.sin(angle) * outer
+    )
+    const rayAlpha = 0.12 + Math.sin(t * 0.0008 + i * 0.5) * 0.06
+    rayGradient.addColorStop(0, `rgba(252, 211, 77, ${rayAlpha * 0.3})`)
+    rayGradient.addColorStop(0.5, `rgba(252, 211, 77, ${rayAlpha})`)
+    rayGradient.addColorStop(1, `rgba(252, 211, 77, 0)`)
 
     ctx.beginPath()
     ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
     ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer)
-    ctx.strokeStyle = `rgba(252, 211, 77, ${0.12 + Math.sin(t * 0.005 + i) * 0.05})`
-    ctx.lineWidth = 3
+    ctx.strokeStyle = rayGradient
+    ctx.lineWidth = 4
     ctx.lineCap = "round"
     ctx.stroke()
   }
 
-  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 20)
-  grd.addColorStop(0, `rgba(252, 211, 77, ${0.18 + Math.sin(t * 0.004) * 0.04})`)
-  grd.addColorStop(1, "rgba(252, 211, 77, 0)")
+  // Draw bright core
+  const coreGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18)
+  coreGradient.addColorStop(0, "rgba(255, 235, 130, 0.35)")
+  coreGradient.addColorStop(0.5, `rgba(252, 211, 77, ${0.25 + Math.sin(t * 0.0008) * 0.08})`)
+  coreGradient.addColorStop(1, "rgba(252, 211, 77, 0.05)")
   ctx.beginPath()
-  ctx.arc(cx, cy, 20, 0, Math.PI * 2)
-  ctx.fillStyle = grd
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2)
+  ctx.fillStyle = coreGradient
   ctx.fill()
 }
 
