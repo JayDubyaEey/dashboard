@@ -62,7 +62,7 @@ export function AllergyCard({ pollen }: AllergyCardProps) {
     <Card className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Flower2 className="w-4 h-4" />
+          <Flower2 className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
           Pollen
         </CardTitle>
       </CardHeader>

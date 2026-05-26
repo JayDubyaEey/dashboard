@@ -75,7 +75,7 @@ export function AirQualityCard({ aqi, pm25, pm10, no2 }: AirQualityCardProps) {
       <div className="relative z-10 flex flex-col flex-1">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wind className="w-4 h-4" />
+            <Wind className="w-4 h-4" style={{ color: "var(--color-primary)" }} />
             Air Quality
           </CardTitle>
         </CardHeader>

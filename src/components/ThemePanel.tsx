@@ -32,10 +32,8 @@ export function ThemeTrigger({ open, onToggle }: ThemeTriggerProps) {
     <button
       onClick={onToggle}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
-        "border border-border bg-card text-muted-foreground",
-        "hover:text-foreground hover:bg-secondary transition-colors",
-        open && "text-foreground bg-secondary"
+        "flex items-center gap-1.5 hover:text-foreground transition-colors",
+        open && "text-foreground"
       )}
       aria-label="Theme settings"
     >
