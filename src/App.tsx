@@ -15,12 +15,12 @@ import { AllergyCard } from "@/components/AllergyCard"
 import { HourlyChart } from "@/components/HourlyChart"
 import { MoonPhaseCard } from "@/components/MoonPhaseCard"
 import { ThemePanel, ThemeTrigger } from "@/components/ThemePanel"
-import { Loader2, RefreshCw, GitFork, CloudSun, Maximize, Minimize } from "lucide-react"
+import { Loader2, GitFork, Maximize, Minimize } from "lucide-react"
 
 function App() {
   const { location, loading: geoLoading } = useGeolocation()
   const { now, greeting, timeString, dateString, tzAbbr, timezone } = useTime()
-  const { weather, loading: weatherLoading, lastUpdated } = useWeather(location.lat, location.lon)
+  const { weather, loading: weatherLoading } = useWeather(location.lat, location.lon)
   const { airQuality, loading: aqLoading } = useAirQuality(location.lat, location.lon)
   const { hourly } = useHourlyForecast(location.lat, location.lon)
   const { mode, setThemeMode, background, backgroundId, setBackground } = useTheme()
@@ -49,151 +49,136 @@ function App() {
 
   const isLoading = geoLoading || weatherLoading || aqLoading
 
-  const lastUpdatedStr = lastUpdated
-    ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : null
-
   return (
     <div
       className="min-h-screen flex flex-col transition-colors duration-300"
       style={background.value ? { background: background.value } : undefined}
     >
-      <div className="flex-1 flex flex-col justify-center w-[80%] mx-auto p-4 sm:p-8">
-        {/* Header row */}
-        <div className="mb-8">
-          <GreetingHeader
-            greeting={greeting}
-            city={location.city}
-            timeString={timeString}
-            dateString={dateString}
-            tzAbbr={tzAbbr}
-            timezone={timezone}
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="flex-1 flex flex-col justify-center items-center w-full">
+        <div className="w-[92%] sm:w-[80%] py-8 sm:py-12">
+          {/* Header row */}
+          <div className="mb-8">
+            <GreetingHeader
+              greeting={greeting}
+              city={location.city}
+              timeString={timeString}
+              dateString={dateString}
+              tzAbbr={tzAbbr}
+              timezone={timezone}
+            />
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Row 1: Weather · Wind & Pressure · Air Quality · Pollen — 4 equal columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {weather && (
-                <WeatherCard
-                  temperature={weather.temperature}
-                  feelsLike={weather.feelsLike}
-                  humidity={weather.humidity}
-                  uvIndex={weather.uvIndex}
-                  weatherCode={weather.weatherCode}
-                />
-              )}
-              {weather && (
-                <WindPressureCard
-                  windSpeed={weather.windSpeed}
-                  windDirection={weather.windDirection}
-                  windGusts={weather.windGusts}
-                  pressure={weather.pressure}
-                />
-              )}
-              {airQuality && (
-                <AirQualityCard
-                  aqi={airQuality.aqi}
-                  pm25={airQuality.pm25}
-                  pm10={airQuality.pm10}
-                  no2={airQuality.no2}
-                />
-              )}
-              {airQuality && <AllergyCard pollen={airQuality.pollen} />}
+
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-
-            {/* Row 2: Hourly temperature chart — full width */}
-            {hourly && <HourlyChart data={hourly} />}
-
-            {/* Row 3: Sun Arc + Moon Phase */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {weather && (
-                <div className="lg:col-span-3">
-                  <SunArcCard
-                    sunrise={weather.sunrise}
-                    sunset={weather.sunset}
-                    now={now}
-                    lat={location.lat}
+          ) : (
+            <div className="space-y-6">
+              {/* Row 1: Weather · Wind & Pressure · Air Quality · Pollen — 4 equal columns */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {weather && (
+                  <WeatherCard
+                    temperature={weather.temperature}
+                    feelsLike={weather.feelsLike}
+                    humidity={weather.humidity}
+                    uvIndex={weather.uvIndex}
+                    weatherCode={weather.weatherCode}
                   />
+                )}
+                {weather && (
+                  <WindPressureCard
+                    windSpeed={weather.windSpeed}
+                    windDirection={weather.windDirection}
+                    windGusts={weather.windGusts}
+                    pressure={weather.pressure}
+                  />
+                )}
+                {airQuality && (
+                  <AirQualityCard
+                    aqi={airQuality.aqi}
+                    pm25={airQuality.pm25}
+                    pm10={airQuality.pm10}
+                    no2={airQuality.no2}
+                  />
+                )}
+                {airQuality && <AllergyCard pollen={airQuality.pollen} />}
+              </div>
+
+              {/* Row 2: Hourly temperature chart — full width */}
+              {hourly && <HourlyChart data={hourly} />}
+
+              {/* Row 3: Sun Arc + Moon Phase */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {weather && (
+                  <div className="lg:col-span-3">
+                    <SunArcCard
+                      sunrise={weather.sunrise}
+                      sunset={weather.sunset}
+                      now={now}
+                      lat={location.lat}
+                    />
+                  </div>
+                )}
+                <div className="lg:col-span-1">
+                  <MoonPhaseCard now={now} />
                 </div>
+              </div>
+
+              {/* Row 4: Countdowns — full width */}
+              <CountdownRings now={now} />
+
+              {appearanceOpen && (
+                <ThemePanel
+                  mode={mode}
+                  backgroundId={backgroundId}
+                  forcedMode={background.forcedMode}
+                  onModeChange={setThemeMode}
+                  onBackgroundChange={setBackground}
+                  onClose={() => setAppearanceOpen(false)}
+                />
               )}
-              <div className="lg:col-span-1">
-                <MoonPhaseCard now={now} />
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="mt-8 pb-4 pt-6 px-[4%] sm:px-[10%]">
+            <div className="grid grid-cols-3 items-center text-xs text-muted-foreground">
+              {/* Left — appearance */}
+              <div className="flex items-center justify-start">
+                <ThemeTrigger open={appearanceOpen} onToggle={() => setAppearanceOpen((o) => !o)} />
+              </div>
+
+              {/* Centre — fullscreen */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={toggleFullscreen}
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Minimize className="w-3.5 h-3.5" />
+                  ) : (
+                    <Maximize className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{isFullscreen ? "Exit" : "Fullscreen"}</span>
+                </button>
+              </div>
+
+              {/* Right — GitHub */}
+              <div className="flex items-center justify-end">
+                <a
+                  href="https://github.com/JayDubyaEey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                >
+                  <GitFork className="w-3.5 h-3.5" />
+                  <span>JayDubyaEey</span>
+                </a>
               </div>
             </div>
-
-            {/* Row 3: Countdowns — full width */}
-            <CountdownRings now={now} />
-
-            {appearanceOpen && (
-              <ThemePanel
-                mode={mode}
-                backgroundId={backgroundId}
-                forcedMode={background.forcedMode}
-                onModeChange={setThemeMode}
-                onBackgroundChange={setBackground}
-                onClose={() => setAppearanceOpen(false)}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Footer */}
-        <footer className="fixed bottom-0 left-0 right-0 pb-4 pt-3 px-[10%]">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-            {/* Left — data source + last updated */}
-            <div className="flex items-center gap-4">
-              <a
-                href="https://open-meteo.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-              >
-                <CloudSun className="w-3.5 h-3.5" />
-                <span>Open-Meteo</span>
-              </a>
-              {lastUpdatedStr && (
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw className="w-3 h-3" />
-                  Updated {lastUpdatedStr}
-                </span>
-              )}
-            </div>
-
-            {/* Centre — appearance + fullscreen */}
-            <div className="flex items-center gap-3">
-              <ThemeTrigger open={appearanceOpen} onToggle={() => setAppearanceOpen((o) => !o)} />
-              <button
-                onClick={toggleFullscreen}
-                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-              >
-                {isFullscreen ? (
-                  <Minimize className="w-3.5 h-3.5" />
-                ) : (
-                  <Maximize className="w-3.5 h-3.5" />
-                )}
-                <span className="hidden sm:inline">{isFullscreen ? "Exit" : "Fullscreen"}</span>
-              </button>
-            </div>
-
-            {/* Right — GitHub */}
-            <a
-              href="https://github.com/JayDubyaEey"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-            >
-              <GitFork className="w-3.5 h-3.5" />
-              <span>JayDubyaEey</span>
-            </a>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </div>
     </div>
   )

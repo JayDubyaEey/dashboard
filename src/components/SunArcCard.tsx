@@ -39,11 +39,9 @@ export function SunArcCard({ sunrise, sunset, now, lat = 51.5074 }: SunArcCardPr
   // Sun position — clamped to visible arc when daytime, parked at start when night
   const sunProgress = isDaytime ? progress : 0
 
-  // Moon
+  // Moon — can be visible day or night depending on phase
   const moonPhaseData = moonPhase(now)
-  const moonProgress = isDaytime
-    ? null
-    : moonNightProgress(now, sunriseDate, sunsetDate, moonPhaseData.phase)
+  const moonProgress = moonNightProgress(now, sunriseDate, sunsetDate, moonPhaseData.phase)
 
   // Countdown + subtext
   const toSunset = sunsetDate.getTime() - now.getTime()

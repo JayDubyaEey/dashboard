@@ -143,17 +143,27 @@ export function moonNightProgress(
   sunsetDate: Date,
   phase: number
 ): number | null {
+  // Approximate moon visibility period based on phase offset from the sun.
+  // Full moon (phase=0.5) rises at sunset, sets at sunrise.
+  // We calculate relative to the nearest solar noon and check multiple
+  // day offsets to handle the midnight boundary correctly.
   const dayMs = sunsetDate.getTime() - sunriseDate.getTime()
   const solarNoonMs = (sunriseDate.getTime() + sunsetDate.getTime()) / 2
-
-  const moonLagMs = phase * 24 * 3_600_000
   const halfDayMs = dayMs / 2
 
-  const moonRiseMs = solarNoonMs - halfDayMs + moonLagMs
-  const moonSetMs = solarNoonMs + halfDayMs + moonLagMs
-
+  const moonLagMs = phase * 24 * 3_600_000
   const nowMs = now.getTime()
-  if (nowMs < moonRiseMs || nowMs > moonSetMs) return null
 
-  return (nowMs - moonRiseMs) / (moonSetMs - moonRiseMs)
+  // Check today and yesterday's solar noon to find the active moon transit
+  for (const offset of [0, -86_400_000, 86_400_000]) {
+    const baseNoon = solarNoonMs + offset
+    const moonRiseMs = baseNoon - halfDayMs + moonLagMs
+    const moonSetMs = baseNoon + halfDayMs + moonLagMs
+
+    if (nowMs >= moonRiseMs && nowMs <= moonSetMs) {
+      return (nowMs - moonRiseMs) / (moonSetMs - moonRiseMs)
+    }
+  }
+
+  return null
 }
